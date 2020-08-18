@@ -10,7 +10,7 @@
         class="item-box"
         :style="{ left: node.x + 'px', top: node.y + 'px' }"
         @mousedown="event => pressNode(ix, event)"
-        @mouseup="event => releaseNode(ix, event)"
+        @mouseup="releaseNode"
       >
         <p>{{node.label}} - {{ ix == currentNode ? 'Activo' : 'Inactivo' }}</p>
       </div>
@@ -19,7 +19,7 @@
     <svg class="flow-container" @mousemove="moveNode" ref="flowContainer">
       <ActionNode
         v-for="(node, ix) in nodes"
-        :key="ix"
+        :key="'node-' + ix"
         :x="node.x"
         :y="node.y"
         :width="node.width"
@@ -29,7 +29,7 @@
       ></ActionNode>
       <NodeRelation
         v-for="(relation, ix) in relations"
-        :key="ix"
+        :key="'relation-' + ix"
         :from="nodes[relation.from]"
         :to="nodes[relation.to]"
         :direction="relation.direction"
@@ -115,7 +115,7 @@ export default {
     flowContainer: null
   }),
   methods: {
-    pressNode: function(nodeIx, event) {
+    pressNode: function(nodeIx) {
       // Cuando alguien da click en un elemento ... (onmousedown)
       // console.log("Se preciono!!!");
       // console.log(event);
@@ -143,7 +143,7 @@ export default {
       }
       // console.log(event);
     },
-    releaseNode: function(nodeIx, event) {
+    releaseNode: function() {
       // Cuando alguien suelta un elemento ... (onmouseup)
       // console.log("Se libero!!!");
       this.currentNode = null;
