@@ -9,7 +9,7 @@
       stroke-miterlimit="10"
       pointer-events="stroke"
     ></path>
-    <!-- Flecha [vertice ]  -->
+    <!-- Flecha [END]  -->
     <path
       :d="endArrow"
       fill="#000000"

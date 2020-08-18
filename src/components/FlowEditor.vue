@@ -26,6 +26,7 @@
         :text="node.label"
         @mousedown="event => pressNode(ix, event)"
         @mouseup="event => releaseNode(ix, event)"
+        @click-node-anchor="event => nodeAnchor(ix, event)"
       ></ActionNode>
       <NodeRelation
         v-for="(relation, ix) in relations"
@@ -102,9 +103,10 @@ export default {
     },
     relations: [
       { from: 1, to: 2, direction: "->" },
-      { from: 3, to: 2, direction: "->" }
+      // { from: 3, to: 2, direction: "->" }
     ],
     currentNode: null,
+    currentNodeAnchor: null, // Anclaje seleccionado para ser unido
     currentX: 0, // Posicion actual del mouse ...
     currentY: 0,
     startX: 0, // Lugar del click original
@@ -151,6 +153,24 @@ export default {
       this.startY = 0;
       this.originalX = 0;
       this.originalY = 0;
+    },
+    nodeAnchor(nodeIx, event) {
+      // Only lines from out to in ...
+      if (event == 'out0') {
+        this.currentNodeAnchor = nodeIx;
+      } else if (event == 'in0' && this.currentNodeAnchor !== null && this.currentNodeAnchor !== nodeIx) {
+        const count = this.relations.filter(relation => relation.from == this.currentNodeAnchor && relation.to == nodeIx);
+        if (count.length == 0) {
+          this.relations.push(
+            { from: this.currentNodeAnchor, to: nodeIx, direction: "->" }
+          )
+          console.log('New relation');
+        } else {
+          console.log('Duplicated relation');
+        }
+      } else if ( this.currentNodeAnchor !== null) {
+        this.currentNodeAnchor = null;
+      }
     },
     infoNode: e => {
       // Metainfo cuando el mouse esta sobre un elemento ... (onmouseenter)

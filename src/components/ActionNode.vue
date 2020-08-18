@@ -1,5 +1,5 @@
 <template>
-  <g transform="translate(0.5,0.5)" style="visibility: visible; cursor: move;">
+  <g transform="translate(0.5,0.5)" style="visibility: visible;">
     <!-- Cuadrado -->
     <rect
       :x="x"
@@ -11,6 +11,7 @@
       fill="#ffffff"
       stroke="#000000"
       pointer-events="all"
+      style="cursor: move;"
       @mousedown="event => $emit('mousedown', event)"
       @mouseup="event => $emit('mouseup', event)"
     ></rect>
@@ -31,6 +32,7 @@
       stroke="blue"
       fill="blue"
       stroke-width="3"
+      @click="$emit('click-node-anchor', 'in0')"
     />
     <!-- Anclaje de salida -->
     <circle
@@ -40,6 +42,7 @@
       stroke="gray"
       fill="gray"
       stroke-width="3"
+      @click="$emit('click-node-anchor', 'out0')"
     />
   </g>
 </template>
