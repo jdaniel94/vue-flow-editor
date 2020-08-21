@@ -16,53 +16,75 @@
       </div>
     </div>
     <h3 v-if="false">SVG area</h3>
-    <svg class="flow-container" @mousemove="moveNode" ref="flowContainer">
-      <g>
-        <!-- Nodos de accion -->
-        <ActionNode
-          v-for="(node, ix) in nodes"
-          :key="'node-' + ix"
-          :x="node.x"
-          :y="node.y"
-          :width="node.width"
-          :text="node.label + '[' + node.node + ']'"
-          @mousedown="event => pressNode(ix, event)"
-          @mouseup="event => releaseNode(ix, event)"
-          @click-node-anchor="event => nodeAnchor(ix, event)"
-        ></ActionNode>
-        <!-- Relaciones entre nodos -->
-        <NodeRelation
-          v-for="(relation, ix) in relations"
-          :key="'relation-' + ix"
-          :from="nodes[relation.from]"
-          :to="nodes[relation.to]"
-          :direction="relation.direction"
-        ></NodeRelation>
-      </g>
-      <!-- Agregar elementos -->
-      
-      <g>
-        <ActionNode
-          :x=20
-          :y=20
-          :width=150
-          @mousedown="event => pressNode(-1, event)"
-          @mouseup="event => releaseNode(-1, event)"
-          text="New Action Node"
-        ></ActionNode>
-        <path
-          d="M 200 0 L 200 250"
-          fill="none"
-          stroke="blue"
-          stroke-dasharray="5,5"
-          stroke-width="1.75"
-          stroke-miterlimit="10"
-          pointer-events="stroke"
-        ></path>
+    <svg class="flow-container" @mousemove="moveNode" @mousedown="moveOffset" @mouseup="event => releaseNode(null, event)" ref="flowContainer" @onfocusout="event => releaseNode(null, event)" :style="{cursor: movingOffset ? 'move': 'default'}" >
+      <g :transform="'translate(' + offsetX + ',' + offsetY + ') scale(' + zoom + ')'">
+        <g >
+          <!-- Nodos de accion -->
+          <ActionNode
+            v-for="(node, ix) in nodes"
+            :key="'node-' + ix"
+            :x="node.x"
+            :y="node.y"
+            :width="node.width"
+            :text="node.label + '[' + node.node + ']'"
+            @mousedown="event => pressNode(ix, event)"
+            @mouseup="event => releaseNode(ix, event)"
+            @click-node-anchor="event => nodeAnchor(ix, event)"
+          ></ActionNode>
+          <!-- Relaciones entre nodos -->
+          <NodeRelation
+            v-for="(relation, ix) in relations"
+            :key="'relation-' + ix"
+            :from="nodes[relation.from]"
+            :to="nodes[relation.to]"
+            :direction="relation.direction"
+          ></NodeRelation>
+        </g>
+        <!-- Agregar elementos -->
+        <g>
+          <!-- Fondo blanco de nuevos elementos -->
+          <rect
+            :x="0 - offsetX"
+            :y="0 - offsetY"
+            width="200"
+            height="250"
+            fill="#ffffff"
+            pointer-events="all"
+          ></rect>
+          <ActionNode
+            :x="20 - offsetX"
+            :y="20 - offsetY"
+            :width=150
+            @mousedown="event => pressNode(-1, event)"
+            @mouseup="event => releaseNode(-1, event)"
+            text="New Action Node"
+          ></ActionNode>
+          <path
+            :d="`M ${200 - offsetX} ${0 - offsetY} L ${200 - offsetX} ${350 - offsetY}`"
+            fill="none"
+            stroke="blue"
+            stroke-dasharray="5,5"
+            stroke-width="1.75"
+            stroke-miterlimit="10"
+            pointer-events="stroke"
+          ></path>
+          <!-- Item en movimiento -->
+          <ActionNode
+            v-if="currentNode !== null"
+            :x="nodes[currentNode].x"
+            :y="nodes[currentNode].y"
+            :width="nodes[currentNode].width"
+            :text="nodes[currentNode].label + '[' + nodes[currentNode].node + ']'"
+            @mouseup="event => releaseNode(-1, event)"
+          ></ActionNode>
+        </g>
       </g>
     </svg>
     X: {{ currentX }}
     Y: {{ currentY }}
+    <br />
+    off X: {{ offsetX }}
+    off Y: {{ offsetY }}
     <code
       style="text-align: left"
       v-if="currentNode != null"
@@ -139,10 +161,21 @@ export default {
     startY: 0,
     originalX: 0, // Posicion original del nodo
     originalY: 0,
+    offsetX: 0, // Movimiento del lienzo
+    offsetY: 0,
+    zoom: 1,
+    movingOffset: false,
     title: "Hii!!",
-    flowContainer: null
+    // flowContainer: null
   }),
   methods: {
+    moveOffset: function () {
+      if (this.currentNode == null) {
+        this.originalX = this.currentX - this.offsetX;
+        this.originalY = this.currentY - this.offsetY;
+        this.movingOffset = true;
+      }
+    },
     pressNode: function(nodeIx) {
       // Cuando alguien da click en un elemento ... (onmousedown)
       if (nodeIx > -1) {
@@ -152,8 +185,8 @@ export default {
         this.$set(this.nodes, nodeIx, {
           node: 1,
           type: "box",
-          x: 20,
-          y: 20,
+          x: 20 - this.offsetX,
+          y: 20 - this.offsetY,
           label: "Default element",
           width: 150,
           height: 50
@@ -171,6 +204,9 @@ export default {
       this.originalY = this.nodes[nodeIx].y;
     },
     moveNode: function(event) {
+      if (this.currentNode != null) {
+        this.movingOffset = false;
+      }
       const parent = this.$refs.flowContainer.getBoundingClientRect();
       // Cuando mueven el elemento ... (onmousemove ?)
       this.currentX = event.x - parent.x;
@@ -181,15 +217,21 @@ export default {
           -this.startX + this.currentX + this.originalX;
         this.nodes[this.currentNode].y =
           -this.startY + this.currentY + this.originalY;
+      } else if (this.movingOffset) { // Seguimos moviendo el offset
+        //
+        this.offsetX = + this.currentX - this.originalX;
+        this.offsetY = + this.currentY - this.originalY;
       }
-      // console.log(event);
     },
-    releaseNode: function() {
+    releaseNode: function(nodeIx) {
       // Cuando alguien suelta un elemento ... (onmouseup)
-      // console.log("Se libero!!!");
+      this.movingOffset = false;
+      if (nodeIx == null) {
+        return null;
+      }
 
       // Si x es menor que 300 se elimina ...
-      if (this.currentX < 300) {
+      if (this.currentX < (300 - this.offsetX)) {
         // Elimino relaciones
         while(this.relations.findIndex(e => e.from == this.currentNode || e.to == this.currentNode) !== -1) {
           var delIx = this.relations.findIndex(e => e.from == this.currentNode || e.to == this.currentNode)
@@ -256,7 +298,7 @@ a {
   border-color: #424ab9;
   margin: 10px;
   border-style: dashed;
-  min-height: 250px;
+  min-height: 350px;
   overflow: hidden;
   box-sizing: border-box;
   position: relative;
