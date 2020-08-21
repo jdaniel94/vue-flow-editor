@@ -17,24 +17,49 @@
     </div>
     <h3 v-if="false">SVG area</h3>
     <svg class="flow-container" @mousemove="moveNode" ref="flowContainer">
-      <ActionNode
-        v-for="(node, ix) in nodes"
-        :key="'node-' + ix"
-        :x="node.x"
-        :y="node.y"
-        :width="node.width"
-        :text="node.label"
-        @mousedown="event => pressNode(ix, event)"
-        @mouseup="event => releaseNode(ix, event)"
-        @click-node-anchor="event => nodeAnchor(ix, event)"
-      ></ActionNode>
-      <NodeRelation
-        v-for="(relation, ix) in relations"
-        :key="'relation-' + ix"
-        :from="nodes[relation.from]"
-        :to="nodes[relation.to]"
-        :direction="relation.direction"
-      ></NodeRelation>
+      <g>
+        <!-- Nodos de accion -->
+        <ActionNode
+          v-for="(node, ix) in nodes"
+          :key="'node-' + ix"
+          :x="node.x"
+          :y="node.y"
+          :width="node.width"
+          :text="node.label + '[' + node.node + ']'"
+          @mousedown="event => pressNode(ix, event)"
+          @mouseup="event => releaseNode(ix, event)"
+          @click-node-anchor="event => nodeAnchor(ix, event)"
+        ></ActionNode>
+        <!-- Relaciones entre nodos -->
+        <NodeRelation
+          v-for="(relation, ix) in relations"
+          :key="'relation-' + ix"
+          :from="nodes[relation.from]"
+          :to="nodes[relation.to]"
+          :direction="relation.direction"
+        ></NodeRelation>
+      </g>
+      <!-- Agregar elementos -->
+      
+      <g>
+        <ActionNode
+          :x=20
+          :y=20
+          :width=150
+          @mousedown="event => pressNode(-1, event)"
+          @mouseup="event => releaseNode(-1, event)"
+          text="New Action Node"
+        ></ActionNode>
+        <path
+          d="M 200 0 L 200 250"
+          fill="none"
+          stroke="blue"
+          stroke-dasharray="5,5"
+          stroke-width="1.75"
+          stroke-miterlimit="10"
+          pointer-events="stroke"
+        ></path>
+      </g>
     </svg>
     X: {{ currentX }}
     Y: {{ currentY }}
@@ -76,7 +101,7 @@ export default {
       1: {
         node: 1,
         type: "box",
-        x: 5,
+        x: 300,
         y: 15,
         label: "Default element",
         width: 150,
@@ -85,7 +110,7 @@ export default {
       2: {
         node: 2,
         type: "box",
-        x: 250,
+        x: 600,
         y: 15,
         label: "Santo clos",
         width: 150,
@@ -94,7 +119,7 @@ export default {
       3: {
         node: 3,
         type: "box",
-        x: 15,
+        x: 300,
         y: 95,
         label: "Santo potato",
         width: 200,
@@ -103,9 +128,10 @@ export default {
     },
     relations: [
       { from: 1, to: 2, direction: "->" },
-      // { from: 3, to: 2, direction: "->" }
+      { from: 3, to: 2, direction: "->" }
     ],
     currentNode: null,
+    newNode: false,
     currentNodeAnchor: null, // Anclaje seleccionado para ser unido
     currentX: 0, // Posicion actual del mouse ...
     currentY: 0,
@@ -119,9 +145,24 @@ export default {
   methods: {
     pressNode: function(nodeIx) {
       // Cuando alguien da click en un elemento ... (onmousedown)
-      // console.log("Se preciono!!!");
-      // console.log(event);
-      this.currentNode = nodeIx;
+      if (nodeIx > -1) {
+        this.currentNode = nodeIx;
+      } else {
+        nodeIx = Math.max(...Object.keys(this.nodes)) + 1;
+        this.$set(this.nodes, nodeIx, {
+          node: 1,
+          type: "box",
+          x: 20,
+          y: 20,
+          label: "Default element",
+          width: 150,
+          height: 50
+        })
+
+        this.nodes[nodeIx].node = nodeIx;
+        this.currentNode = nodeIx;
+        this.newNode = true;
+      }
 
       this.startX = this.currentX;
       this.startY = this.currentY;
@@ -132,8 +173,6 @@ export default {
     moveNode: function(event) {
       const parent = this.$refs.flowContainer.getBoundingClientRect();
       // Cuando mueven el elemento ... (onmousemove ?)
-      // console.log("movimiento ....");
-      // console.log(event);
       this.currentX = event.x - parent.x;
       this.currentY = event.y - parent.y;
 
@@ -148,11 +187,25 @@ export default {
     releaseNode: function() {
       // Cuando alguien suelta un elemento ... (onmouseup)
       // console.log("Se libero!!!");
+
+      // Si x es menor que 300 se elimina ...
+      if (this.currentX < 300) {
+        // Elimino relaciones
+        while(this.relations.findIndex(e => e.from == this.currentNode || e.to == this.currentNode) !== -1) {
+          var delIx = this.relations.findIndex(e => e.from == this.currentNode || e.to == this.currentNode)
+          this.relations.splice(delIx,1);
+        }
+        
+        // Elimino el nodo
+        delete this.nodes[this.currentNode];
+      }
+
       this.currentNode = null;
       this.startX = 0;
       this.startY = 0;
       this.originalX = 0;
       this.originalY = 0;
+      this.newNode = false;
     },
     nodeAnchor(nodeIx, event) {
       // Only lines from out to in ...
